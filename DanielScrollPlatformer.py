@@ -23,7 +23,8 @@ WHITE    = ( 255, 255, 255)
 BLUE     = (   0,   0, 255)
 RED      = ( 255,   0,   0)
 GREEN    = (   0, 255,   0)
-
+VIOLETT  = ( 255,   0, 255)
+YELLOW   = ( 255, 255,   0)
 
 
 # Screen dimensions
@@ -72,6 +73,47 @@ class Alien(pygame.sprite.Sprite):
 
        
         
+
+    def update(self, seconds):
+        pass
+        
+class Coin(pygame.sprite.Sprite):
+    """
+    This is a coin
+    """
+
+    # -- Class Attributes
+    images=[]
+    #images.append(pygame.image.load("alien100.bmp"))
+    coinimage=pygame.Surface((60,60))
+    coinimage.set_colorkey((0,0,0))
+    pygame.draw.circle(coinimage,YELLOW,(30,30),30)
+    images.append(coinimage)
+    #coinimage.set_colorkey=((0,0,0))
+    
+  
+
+    # -- Methods
+    def __init__(self,x,y):
+        """ Constructor function """
+
+        # Call the parent's constructor
+        pygame.sprite.Sprite.__init__(self)
+        self.x=x
+        self.y=y
+        self.boundary_top = 0
+        self.boundary_bottom = SCREEN_HEIGHT
+        self.boundary_left = 0
+        self.boundary_right = 0
+        self.change_x=0
+        self.change_y=0
+        self.image=Coin.images[0]
+        self.rect=self.image.get_rect()
+        self.rect.centerx=self.x
+        self.rect.centery=self.y
+        self.value=1
+        
+
 
     def update(self, seconds):
         pass
@@ -151,6 +193,12 @@ class Player(pygame.sprite.Sprite):
                         #beam player to target teleporter
                         self.rect.x= block.target.rect.x
                         self.rect.y =block.target.rect.y-120  # above the target teleporter
+                        #exitplatform?
+                        if self.level.exit_list.has(block):
+                            done=True
+                            
+                        
+                        
                 if self.level.moving_list.has(block):
                     self.rect.centerx = block.rect.centerx
                         
@@ -319,6 +367,23 @@ class LavaPlatform(Platform):
     def update(self, seconds):
         """ Paint the platform red. """
         self.image.fill((random.randint(128,255),0,0))
+        
+class ExitPlatform(Platform):
+    """ Platform, which ends the level """
+
+    def __init__(self, width, height):
+        """ Platform constructor.
+            """
+        pygame.sprite.Sprite.__init__(self)
+
+        self.image = pygame.Surface([width, height])
+        self.image.fill(VIOLETT)
+
+        self.rect = self.image.get_rect()
+        
+    def update(self, seconds):
+        """ Paint the platform red. """
+        self.image.fill((random.randint(83, 255),0,random.randint(83, 255)))
 
 
 class MovingPlatform(Platform):
@@ -408,8 +473,10 @@ class Level(object):
 
     # Lists of sprites used in all levels. Add or remove
     # lists as needed for your game. """
-    platform_list = None
-    enemy_list = None
+    #platform_list = None
+  #  coin_list = None
+    #enemy_list = None
+    
 
     # Background image
     background = None
@@ -429,12 +496,14 @@ class Level(object):
         self.moving_list = pygame.sprite.Group()
         self.alien_lilst  =pygame.sprite.Group()
         self.player = player
-
+        self.exit_list = pygame.sprite.Group()
+        self.coin_list = pygame.sprite.Group()
     # Update everythign on this level
     def update(self, seconds):
         """ Update everything in this level."""
         self.seconds = seconds
-        self.platform_list.update(self.seconds)
+        self.platform_list.update(seconds)
+        self.coin_list.update(self.seconds)
         self.enemy_list.update(self.seconds)
 
     def draw(self, screen):
@@ -446,6 +515,7 @@ class Level(object):
         # Draw all the sprite lists that we have
         self.platform_list.draw(screen)
         self.enemy_list.draw(screen)
+        self.coin_list.draw(screen)
 
     def shift_world(self, shift_x):
         """ When the user moves left/right and we need to scroll everything:
@@ -460,6 +530,9 @@ class Level(object):
 
         for enemy in self.enemy_list:
             enemy.rect.x += shift_x
+            
+        for coin in self.coin_list:
+            coin.rect.x += shift_x
 
 # Create platforms for the level
 class Level_01(Level):
@@ -482,17 +555,34 @@ class Level_01(Level):
                  [500, 50, 30, 480],
                  [240, 50, 2300, 530],
                  [240,50, 3200, 500],
-                 [240, 50, 3850, 100],
+                 [240, 50, -700, 700],
                  ] 
-
+                 
+        #add the coins
+        #self.enemy_list=[
+        #    Coin(200, 100),Coin(300,100)
+        #    ]
+        
+        self.coin_list.add(Coin(200,100))
+        self.coin_list.add(Coin(300,100))
+               
+        #Add the 1st Alien
         self.alien_list=[]
         a1=Alien(100, 100)
-        self.alien_list.append(a1)
-        self.platform_list.add(a1)
+        #self.alien_list.append(a1)
+        self.enemy_list.add(a1)
+        #self.platform_list.add(a1)
+        
+        #Add the 2nd Alien
+        #self.alien_list=[]
+        a2=Alien(2400, 100)
+        #self.alien_list.append(a1)
+        self.enemy_list.add(a2)
+        #self.platform_list.add(a1)
         
          # Add a up, down moving platform
         block = MovingPlatform(70, 70)
-        block.rect.x = 360#3600
+        block.rect.x = 3600
         block.rect.y = 200
         block.boundary_top = 10
         block.boundary_bottom = 550
@@ -517,6 +607,14 @@ class Level_01(Level):
         block.player = self.player
         self.platform_list.add(block)
         self.lava_list.add(block)
+        
+        #Now we add the 1st ExitLavaPlatform :D
+        block= ExitPlatform(240, 50)
+        block.rect.x = 3850
+        block.rect.y = 100
+        block.player = self.player
+        self.platform_list.add(block)
+        self.exit_list.add(block)
         
         #Now we add the 2nd Ground LavaPlatform :D
         block= LavaPlatform(40, 50)
@@ -588,6 +686,14 @@ class Level_02(Level):
                  
 
 
+
+        #Add the 1st Alien
+        self.alien_list=[]
+        a1=Alien(100, 100)
+        #self.alien_list.append(a1)
+        self.enemy_list.add(a1)
+        #self.platform_list.add(a1)
+        
         # Go through the array above and add platforms
         for platform in level:
             block = Platform(platform[0], platform[1])
